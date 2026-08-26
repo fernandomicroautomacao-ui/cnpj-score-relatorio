@@ -49,3 +49,11 @@
 
 - [x] Corrigir a cobertura de coordenadas para São José do Rio Pardo
 - [x] Validar o cálculo de distância e roteamento para os dois hubs
+
+- [x] Cadastrar hubs adicionais com nome, cidade, UF e coordenadas
+- [x] Comparar dinamicamente todos os hubs cadastrados na análise
+- [x] Exibir hubs adicionais na interface e no relatório PDF
+- [x] Testar a recomendação com três ou mais hubs
+
+- [x] Evitar duplicação do prefixo “Hub” no vendedor recomendado
+- [x] Atualizar o teste de hubs adicionais com nomenclatura comercial limpa

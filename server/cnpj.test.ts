@@ -47,4 +47,20 @@ describe("CNPJ deterministic scoring", () => {
     expect(result.hubMaisProximo).toBe("Ribeirão Preto");
     expect(result.distanciaRibeiraoKm).toBeLessThan(result.distanciaMariliaKm!);
   });
+
+  it("compares an additional hub and recommends it when it is the closest", () => {
+    const result = scoreCompany({
+      company: { name: "Empresa Industrial Teste", equity: 12_000_000 },
+      office: {
+        status: { text: "Ativa" },
+        mainActivity: { id: "2511000", text: "Fabricação industrial" },
+        address: { city: "Bauru", state: "SP" },
+      },
+    }, "00000000000191", {}, [{ nome: "Hub Bauru", cidade: "Bauru", uf: "SP", lat: -22.3246, lon: -49.0871 }]);
+
+    expect(result.distanciasHubs).toHaveLength(3);
+    expect(result.distanciasHubs[0]).toMatchObject({ nome: "Hub Bauru", distanciaKm: 0 });
+    expect(result.hubMaisProximo).toBe("Hub Bauru");
+    expect(result.vendedor).toBe("Vendedor Externo — Hub Bauru");
+  });
 });

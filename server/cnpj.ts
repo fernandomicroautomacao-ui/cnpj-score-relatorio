@@ -19,15 +19,17 @@ export type CnpjResult = {
   hubMaisProximo: string;
   distanciaMariliaKm: number | null;
   distanciaRibeiraoKm: number | null;
+  distanciasHubs: { nome: string; distanciaKm: number }[];
   explicacao: string;
 };
 
 export type CnpjOverrides = Partial<Pick<CnpjResult, "razaoSocial" | "nomeFantasia" | "situacao" | "capitalSocial" | "cnaePrincipal" | "atividadePrincipal" | "cidade" | "uf" | "endereco">>;
+export type HubInput = { nome: string; cidade?: string; uf?: string; lat: number; lon: number };
 
-const HUBS = {
-  Marília: { lat: -22.2139, lon: -49.9458 },
-  "Ribeirão Preto": { lat: -21.1775, lon: -47.8103 },
-};
+const DEFAULT_HUBS: HubInput[] = [
+  { nome: "Marília", cidade: "Marília", uf: "SP", lat: -22.2139, lon: -49.9458 },
+  { nome: "Ribeirão Preto", cidade: "Ribeirão Preto", uf: "SP", lat: -21.1775, lon: -47.8103 },
+];
 
 const CITY_COORDS: Record<string, [number, number]> = {
   "MARILIA": [-22.2139, -49.9458], "RIBEIRAO PRETO": [-21.1775, -47.8103], "BAURU": [-22.3246, -49.0871], "ARARAQUARA": [-21.7946, -48.1756], "SAO CARLOS": [-22.0174, -47.8908], "CAMPINAS": [-22.9056, -47.0608], "SAO PAULO": [-23.5505, -46.6333], "BAREURI": [-23.5112, -46.8765], "BARUERI": [-23.5112, -46.8765], "FRANCA": [-20.5397, -47.4008], "SERTAOZINHO": [-21.1356, -47.9903], "CATANDUVA": [-21.1378, -48.9728], "SAO JOSE DO RIO PRETO": [-20.8113, -49.3758], "SAO JOSE DO RIO PARDO": [-21.59556, -46.88861], "PIRACICABA": [-22.7338, -47.6476], "BOTUCATU": [-22.8858, -48.445], "ASSIS": [-22.6617, -50.4122], "JAU": [-22.2965, -48.5578], "ARACATUBA": [-21.2076, -50.4401], "BIRIGUI": [-21.2928, -50.3406], "VOTUPORANGA": [-20.4237, -49.9781], "RIO CLARO": [-22.4113, -47.5613], "PORTO FERREIRA": [-21.8539, -47.4792], "MIRASSOL": [-20.8197, -49.5204], "MATAO": [-21.6033, -48.3658], "OLIMPIA": [-20.7372, -48.9147], "PENAPOLIS": [-21.4197, -50.0774], "LINS": [-21.6786, -49.7425], "TUPA": [-21.9347, -50.5136], "PIRAJU": [-23.1981, -49.3839], "MOGI GUACU": [-22.3722, -46.9422], "MOGI MIRIM": [-22.4333, -46.9578], "DESCALVADO": [-21.9039, -47.6194], "PINDORAMA": [-21.1856, -48.9072], "MONTE ALTO": [-21.2611, -48.4964], "CRAVINHOS": [-21.3403, -47.7294], "JARDINOPOLIS": [-21.0178, -47.7639], "PITANGUEIRAS": [-21.0094, -48.2217], "ITARARE": [-24.1125, -49.3353], "VOTORANTIM": [-23.5467, -47.4378], "CABREUVA": [-23.3075, -47.1328], "DRACENA": [-21.4833, -51.5342],
@@ -65,25 +67,31 @@ function extract(payload: any, cnpj: string): any {
   };
 }
 
-export function scoreCompany(raw: any, cnpj: string, overrides: CnpjOverrides = {}): CnpjResult {
+export function scoreCompany(raw: any, cnpj: string, overrides: CnpjOverrides = {}, extraHubs: HubInput[] = []): CnpjResult {
   const base = extract(raw, cnpj); const p = { ...base, ...overrides, cnae: overrides.cnaePrincipal ?? base.cnae, atividade: overrides.atividadePrincipal ?? base.atividade }; const city = normCity(p.cidade); const details: CnpjResult["scoreDetalhes"] = [];
   const status = p.situacao.toUpperCase(); const active = SCORING_RULES.situacao.ativaKeywords.some(keyword => status.includes(keyword)); details.push({ criterio: "Situação cadastral", resultado: active ? "Ativa/regular" : p.situacao, pontos: active ? SCORING_RULES.situacao.ativaPontos : SCORING_RULES.situacao.inativaPontos });
   const equity = p.capitalSocial ?? 0; const sizePts = p.capitalSocial == null ? SCORING_RULES.capitalSocial.semInformacaoPontos : equity >= SCORING_RULES.capitalSocial.grandeMin ? 3 : equity >= SCORING_RULES.capitalSocial.mediaMin ? 2 : 1; const porte = equity >= SCORING_RULES.capitalSocial.grandeMin ? "Grande" : equity >= SCORING_RULES.capitalSocial.mediaMin ? "Média" : "Pequena"; details.push({ criterio: "Capital social / porte inferido", resultado: p.capitalSocial == null ? "Não informado; faixa conservadora" : `R$ ${equity.toLocaleString("pt-BR",{minimumFractionDigits:2})} · ${porte}`, pontos: sizePts });
   const industrial = SCORING_RULES.cnaeCategoriaAKeywords.some(keyword => `${p.cnae} ${p.atividade}`.toUpperCase().includes(keyword)); const categoryPts = industrial ? SCORING_RULES.categoria.industrialPontos : p.cnae || p.atividade ? SCORING_RULES.categoria.intermediariaPontos : SCORING_RULES.categoria.semClassificacaoPontos; details.push({ criterio: "Aderência por CNAE", resultado: industrial ? "Categoria A · industrial/produção" : "Categoria B · mercado intermediário", pontos: categoryPts });
   const coords: [number, number] | null = Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.lat !== 0 && p.lon !== 0 ? [p.lat,p.lon] : CITY_COORDS[city] ?? null;
-  const marKm = coords ? haversine(coords,HUBS.Marília) : null; const rpKm = coords ? haversine(coords,HUBS["Ribeirão Preto"]) : null; const near = marKm != null && rpKm != null ? (marKm <= rpKm ? "Marília" : "Ribeirão Preto") : "não calculado"; const geoPts = coords ? (Math.min(marKm!,rpKm!) <= SCORING_RULES.geografia.hubProximoKm ? 3 : Math.min(marKm!,rpKm!) <= SCORING_RULES.geografia.regiaoSecundariaKm ? 2 : 1) : 1;
+  const hubs = [...DEFAULT_HUBS, ...extraHubs.filter(hub => hub.nome.trim() && Number.isFinite(hub.lat) && Number.isFinite(hub.lon))];
+  const distanciasHubs = coords ? hubs.map(hub => ({ nome: hub.nome.trim(), distanciaKm: haversine(coords, hub) })).sort((a,b) => a.distanciaKm - b.distanciaKm) : [];
+  const near = distanciasHubs[0]?.nome ?? "não calculado";
+  const marKm = distanciasHubs.find(hub => hub.nome === "Marília")?.distanciaKm ?? null;
+  const rpKm = distanciasHubs.find(hub => hub.nome === "Ribeirão Preto")?.distanciaKm ?? null;
+  const nearestKm = distanciasHubs[0]?.distanciaKm;
+  const geoPts = nearestKm == null ? 1 : nearestKm <= SCORING_RULES.geografia.hubProximoKm ? 3 : nearestKm <= SCORING_RULES.geografia.regiaoSecundariaKm ? 2 : 1;
   details.push({ criterio: "Geografia", resultado: coords ? `${near} é o hub mais próximo` : "Cidade sem coordenada cadastrada", pontos: geoPts });
-  const score = details.reduce((s,d)=>s+d.pontos,0); let vendedor = "Vendedor Interno Online"; if (score >= SCORING_RULES.pontuacaoMinimaExterna && near === "Marília") vendedor = "Vendedor Externo — Hub Marília"; else if (score >= SCORING_RULES.pontuacaoMinimaExterna && near === "Ribeirão Preto") vendedor = "Vendedor Externo — Hub Ribeirão Preto";
-  const reason = `${p.razaoSocial} soma ${score} pontos: ${details.map(d => `${d.criterio}: ${d.pontos} ponto(s)`).join("; ")}. ${near === "não calculado" ? "A distância não pôde ser calculada com os dados disponíveis." : `Distâncias: Marília ${marKm} km e Ribeirão Preto ${rpKm} km; ${near} é o hub mais próximo.`} Recomendação: ${vendedor}.`;
-  return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, score, scoreDetalhes: details, vendedor, hubMaisProximo: near, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, explicacao: reason };
+  const score = details.reduce((s,d)=>s+d.pontos,0); const hubLabel = near.toLowerCase().startsWith("hub ") ? near : `Hub ${near}`; const vendedor = score >= SCORING_RULES.pontuacaoMinimaExterna && near !== "não calculado" ? `Vendedor Externo — ${hubLabel}` : "Vendedor Interno Online";
+  const reason = `${p.razaoSocial} soma ${score} pontos: ${details.map(d => `${d.criterio}: ${d.pontos} ponto(s)`).join("; ")}. ${near === "não calculado" ? "A distância não pôde ser calculada com os dados disponíveis." : `Distâncias: ${distanciasHubs.map(hub => `${hub.nome} ${hub.distanciaKm} km`).join(", ")}; ${near} é o hub mais próximo.`} Recomendação: ${vendedor}.`;
+  return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, score, scoreDetalhes: details, vendedor, hubMaisProximo: near, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, distanciasHubs, explicacao: reason };
 }
 
-export async function fetchCnpj(cnpj: string, overrides: CnpjOverrides = {}): Promise<CnpjResult> {
+export async function fetchCnpj(cnpj: string, overrides: CnpjOverrides = {}, extraHubs: HubInput[] = []): Promise<CnpjResult> {
   const clean = onlyDigits(cnpj);
   if (!isValidCnpj(clean)) throw new Error("CNPJ inválido. Confira os 14 dígitos informados.");
   const response = await fetch(`https://open.cnpja.com/office/${clean}`);
   if (!response.ok) throw new Error(`CNPJá retornou HTTP ${response.status}.`);
-  return scoreCompany(await response.json(), clean, overrides);
+  return scoreCompany(await response.json(), clean, overrides, extraHubs);
 }
 
 export function createPdf(results: CnpjResult[]) {
@@ -98,7 +106,7 @@ export function createPdf(results: CnpjResult[]) {
     doc.fontSize(10).fillColor("#263B4D").text(`Pontuação: ${r.score} pontos   |   Hub mais próximo: ${r.hubMaisProximo}`);
     doc.moveDown(.4).text(`Capital social: ${r.capitalSocial == null ? "Não informado" : `R$ ${r.capitalSocial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}   |   Porte inferido: ${r.porte}`);
     doc.text(`Endereço: ${r.endereco || "Não informado"}`);
-    doc.text(`Distância Marília: ${r.distanciaMariliaKm == null ? "n/d" : `${r.distanciaMariliaKm} km`}   |   Distância Ribeirão Preto: ${r.distanciaRibeiraoKm == null ? "n/d" : `${r.distanciaRibeiraoKm} km`}`);
+    doc.text(`Distâncias aos hubs: ${r.distanciasHubs.length ? r.distanciasHubs.map(hub => `${hub.nome} ${hub.distanciaKm} km`).join(" | ") : "n/d"}`);
     doc.moveDown(.8).fontSize(11).fillColor("#16324F").text("Memória de cálculo");
     r.scoreDetalhes.forEach(d => doc.fontSize(9).fillColor("#263B4D").text(`• ${d.criterio}: ${d.resultado} — ${d.pontos} ponto(s)`));
     doc.moveDown(.8).fontSize(10).text(r.explicacao);

@@ -9,7 +9,8 @@ const overridesInput = z.object({
   razaoSocial: z.string().optional(), nomeFantasia: z.string().optional(), situacao: z.string().optional(), capitalSocial: z.number().nullable().optional(),
   cnaePrincipal: z.string().optional(), atividadePrincipal: z.string().optional(), cidade: z.string().optional(), uf: z.string().optional(), endereco: z.string().optional(),
 }).partial();
-const cnpjInput = z.object({ cnpjs: z.array(z.string().min(1)).min(1).max(5, "A API Pública permite no máximo cinco consultas por minuto."), overrides: overridesInput.optional() });
+const hubInput = z.object({ nome: z.string().trim().min(2).max(80), cidade: z.string().trim().max(80).optional(), uf: z.string().trim().max(2).optional(), lat: z.number().min(-34).max(6), lon: z.number().min(-75).max(-28) });
+const cnpjInput = z.object({ cnpjs: z.array(z.string().min(1)).min(1).max(5, "A API Pública permite no máximo cinco consultas por minuto."), overrides: overridesInput.optional(), hubs: z.array(hubInput).max(10).optional() });
 
 export const appRouter = router({
   system: systemRouter,
@@ -30,7 +31,7 @@ export const appRouter = router({
       const errors = [];
       for (const value of input.cnpjs) {
         try {
-          results.push(await fetchCnpj(value, input.overrides));
+          results.push(await fetchCnpj(value, input.overrides, input.hubs));
         } catch (error) {
           errors.push({ cnpj: value, message: error instanceof Error ? error.message : "Falha ao consultar o CNPJ." });
         }
@@ -40,7 +41,7 @@ export const appRouter = router({
     report: publicProcedure.input(cnpjInput).mutation(async ({ input }) => {
       const results = [];
       for (const value of input.cnpjs) {
-        try { results.push(await fetchCnpj(value, input.overrides)); } catch { /* relatório segue com os CNPJs válidos */ }
+        try { results.push(await fetchCnpj(value, input.overrides, input.hubs)); } catch { /* relatório segue com os CNPJs válidos */ }
       }
       if (!results.length) throw new Error("Nenhum CNPJ válido foi consultado.");
       const chunks: Buffer[] = [];
