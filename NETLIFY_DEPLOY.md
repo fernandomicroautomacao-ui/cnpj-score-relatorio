@@ -25,15 +25,11 @@ O arquivo `netlify.toml` já define os parâmetros necessários:
 | Functions directory | `netlify/functions` |
 | Versão Node | `22` |
 
-## 3. Variável segura do CNPJá
+## 3. API Pública do CNPJá
 
-No Netlify, abra **Project configuration** → **Environment variables** e adicione:
+Não é necessário configurar chave, token ou variável de ambiente. A aplicação consulta diretamente o endpoint público `GET https://open.cnpja.com/office/:cnpj`, sempre com o CNPJ sem pontuação.
 
-| Nome | Valor | Escopo |
-|---|---|---|
-| `CNPJA_API_KEY` | Chave comercial do CNPJá | Functions |
-
-Sem essa variável, a aplicação utiliza o endpoint público do CNPJá, sujeito ao limite público de consultas. A chave nunca deve ser colocada em arquivos de frontend ou em variáveis com prefixo `VITE_`.
+> A API Pública possui limite de **5 consultas por minuto por endereço IP**. Por isso, mantenha lotes pequenos e evite consultas simultâneas. Os dados públicos podem ter defasagem em relação às fontes originais.
 
 ## 4. Publicação
 

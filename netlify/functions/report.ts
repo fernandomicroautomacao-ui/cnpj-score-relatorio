@@ -5,10 +5,11 @@ export default async (request: Request) => {
   if (request.method !== "POST") return Response.json({ error: "Método não permitido." }, { status: 405 });
   try {
     const body = await request.json() as { cnpjs?: string[]; overrides?: CnpjOverrides };
-    const cnpjs = Array.isArray(body.cnpjs) ? body.cnpjs.slice(0, 100) : [];
+    const cnpjs = Array.isArray(body.cnpjs) ? body.cnpjs : [];
     const results = [];
+    if (cnpjs.length > 5) return Response.json({ error: "A API Pública permite no máximo cinco consultas por minuto." }, { status: 429 });
     for (const cnpj of cnpjs) {
-      try { results.push(await fetchCnpj(cnpj, process.env.CNPJA_API_KEY, body.overrides)); } catch { /* mantém apenas resultados consultados */ }
+      try { results.push(await fetchCnpj(cnpj, body.overrides)); } catch { /* mantém apenas resultados consultados */ }
     }
     if (!results.length) return Response.json({ error: "Nenhum CNPJ válido foi consultado." }, { status: 422 });
     const pdf = createPdf(results);

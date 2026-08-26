@@ -78,11 +78,10 @@ export function scoreCompany(raw: any, cnpj: string, overrides: CnpjOverrides = 
   return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, score, scoreDetalhes: details, vendedor, hubMaisProximo: near, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, explicacao: reason };
 }
 
-export async function fetchCnpj(cnpj: string, apiKey?: string, overrides: CnpjOverrides = {}): Promise<CnpjResult> {
+export async function fetchCnpj(cnpj: string, overrides: CnpjOverrides = {}): Promise<CnpjResult> {
   const clean = onlyDigits(cnpj);
   if (!isValidCnpj(clean)) throw new Error("CNPJ inválido. Confira os 14 dígitos informados.");
-  const url = apiKey ? `https://api.cnpja.com/office/${clean}` : `https://open.cnpja.com/office/${clean}`;
-  const response = await fetch(url, { headers: apiKey ? { Authorization: apiKey } : {} });
+  const response = await fetch(`https://open.cnpja.com/office/${clean}`);
   if (!response.ok) throw new Error(`CNPJá retornou HTTP ${response.status}.`);
   return scoreCompany(await response.json(), clean, overrides);
 }

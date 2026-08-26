@@ -6,7 +6,7 @@ export default async (request: Request) => {
   try {
     const body = await request.json() as { cnpj?: string };
     if (!body.cnpj) return Response.json({ error: "Informe o CNPJ." }, { status: 400 });
-    return Response.json(await fetchCnpj(body.cnpj, process.env.CNPJA_API_KEY));
+    return Response.json(await fetchCnpj(body.cnpj));
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Falha ao consultar CNPJ." }, { status: 400 });
   }
