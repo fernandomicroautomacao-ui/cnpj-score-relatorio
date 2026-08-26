@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { double, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,30 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const salesHubs = mysqlTable("sales_hubs", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 80 }).notNull().unique(),
+  city: varchar("city", { length: 80 }).notNull(),
+  state: varchar("state", { length: 2 }).notNull(),
+  ddd: varchar("ddd", { length: 2 }),
+  latitude: double("latitude").notNull(),
+  longitude: double("longitude").notNull(),
+  minimumScore: int("minimumScore"),
+  isDefault: int("isDefault").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const scoringParameters = mysqlTable("scoring_parameters", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 120 }).notNull(),
+  value: int("value").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SalesHub = typeof salesHubs.$inferSelect;
+export type InsertSalesHub = typeof salesHubs.$inferInsert;
+export type ScoringParameter = typeof scoringParameters.$inferSelect;
+export type InsertScoringParameter = typeof scoringParameters.$inferInsert;

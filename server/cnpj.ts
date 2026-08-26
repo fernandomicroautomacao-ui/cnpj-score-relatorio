@@ -25,7 +25,8 @@ export type CnpjResult = {
 };
 
 export type CnpjOverrides = Partial<Pick<CnpjResult, "razaoSocial" | "nomeFantasia" | "situacao" | "capitalSocial" | "cnaePrincipal" | "atividadePrincipal" | "cidade" | "uf" | "endereco">>;
-export type HubInput = { nome: string; cidade?: string; uf?: string; ddd?: string; lat: number; lon: number };
+export type HubInput = { nome: string; cidade?: string; uf?: string; ddd?: string; lat: number; lon: number; minimumScore?: number };
+export type RuntimeRules = Partial<{ situacaoAtiva: number; situacaoInativa: number; capitalGrande: number; capitalMedia: number; capitalPequena: number; capitalGrandeMin: number; capitalMediaMin: number; capitalSemInformacao: number; cnaeA: number; cnaeB: number; cnaeSemClassificacao: number; geoProximo: number; geoSecundario: number; geoDistante: number; geoProximoKm: number; geoSecundarioKm: number; dddMesmo: number; dddEstado: number; dddOutro: number; minimoExterno: number }>;
 
 const DEFAULT_HUBS: HubInput[] = [
   { nome: "Marília", cidade: "Marília", uf: "SP", ddd: "14", lat: -22.2139, lon: -49.9458 },
@@ -68,43 +69,46 @@ function extract(payload: any, cnpj: string): any {
   };
 }
 
-export function scoreCompany(raw: any, cnpj: string, overrides: CnpjOverrides = {}, extraHubs: HubInput[] = []): CnpjResult {
+export function scoreCompany(raw: any, cnpj: string, overrides: CnpjOverrides = {}, extraHubs: HubInput[] = [], ruleOverrides: RuntimeRules = {}): CnpjResult {
   const base = extract(raw, cnpj); const p = { ...base, ...overrides, cnae: overrides.cnaePrincipal ?? base.cnae, atividade: overrides.atividadePrincipal ?? base.atividade }; const city = normCity(p.cidade); const details: CnpjResult["scoreDetalhes"] = [];
-  const status = p.situacao.toUpperCase(); const active = SCORING_RULES.situacao.ativaKeywords.some(keyword => status.includes(keyword)); details.push({ criterio: "Situação cadastral", resultado: active ? "Ativa/regular" : p.situacao, pontos: active ? SCORING_RULES.situacao.ativaPontos : SCORING_RULES.situacao.inativaPontos });
-  const equity = p.capitalSocial ?? 0; const sizePts = p.capitalSocial == null ? SCORING_RULES.capitalSocial.semInformacaoPontos : equity >= SCORING_RULES.capitalSocial.grandeMin ? 3 : equity >= SCORING_RULES.capitalSocial.mediaMin ? 2 : 1; const porte = equity >= SCORING_RULES.capitalSocial.grandeMin ? "Grande" : equity >= SCORING_RULES.capitalSocial.mediaMin ? "Média" : "Pequena"; details.push({ criterio: "Capital social / porte inferido", resultado: p.capitalSocial == null ? "Não informado; faixa conservadora" : `R$ ${equity.toLocaleString("pt-BR",{minimumFractionDigits:2})} · ${porte}`, pontos: sizePts });
-  const industrial = SCORING_RULES.cnaeCategoriaAKeywords.some(keyword => `${p.cnae} ${p.atividade}`.toUpperCase().includes(keyword)); const categoryPts = industrial ? SCORING_RULES.categoria.industrialPontos : p.cnae || p.atividade ? SCORING_RULES.categoria.intermediariaPontos : SCORING_RULES.categoria.semClassificacaoPontos; details.push({ criterio: "Aderência por CNAE", resultado: industrial ? "Categoria A · industrial/produção" : "Categoria B · mercado intermediário", pontos: categoryPts });
+  const rules = { situacaoAtiva: SCORING_RULES.situacao.ativaPontos, situacaoInativa: SCORING_RULES.situacao.inativaPontos, capitalGrande: 3, capitalMedia: 2, capitalPequena: 1, capitalGrandeMin: SCORING_RULES.capitalSocial.grandeMin, capitalMediaMin: SCORING_RULES.capitalSocial.mediaMin, capitalSemInformacao: SCORING_RULES.capitalSocial.semInformacaoPontos, cnaeA: SCORING_RULES.categoria.industrialPontos, cnaeB: SCORING_RULES.categoria.intermediariaPontos, cnaeSemClassificacao: SCORING_RULES.categoria.semClassificacaoPontos, geoProximo: 3, geoSecundario: 2, geoDistante: 1, geoProximoKm: SCORING_RULES.geografia.hubProximoKm, geoSecundarioKm: SCORING_RULES.geografia.regiaoSecundariaKm, dddMesmo: SCORING_RULES.ddd.mesmoDddPontos, dddEstado: SCORING_RULES.ddd.mesmoEstadoPontos, dddOutro: SCORING_RULES.ddd.outroPontos, minimoExterno: SCORING_RULES.pontuacaoMinimaExterna, ...ruleOverrides };
+  const status = p.situacao.toUpperCase(); const active = SCORING_RULES.situacao.ativaKeywords.some(keyword => status.includes(keyword)); details.push({ criterio: "Situação cadastral", resultado: active ? "Ativa/regular" : p.situacao, pontos: active ? rules.situacaoAtiva : rules.situacaoInativa });
+  const equity = p.capitalSocial ?? 0; const sizePts = p.capitalSocial == null ? rules.capitalSemInformacao : equity >= rules.capitalGrandeMin ? rules.capitalGrande : equity >= rules.capitalMediaMin ? rules.capitalMedia : rules.capitalPequena; const porte = equity >= rules.capitalGrandeMin ? "Grande" : equity >= rules.capitalMediaMin ? "Média" : "Pequena"; details.push({ criterio: "Capital social / porte inferido", resultado: p.capitalSocial == null ? "Não informado; faixa conservadora" : `R$ ${equity.toLocaleString("pt-BR",{minimumFractionDigits:2})} · ${porte}`, pontos: sizePts });
+  const industrial = SCORING_RULES.cnaeCategoriaAKeywords.some(keyword => `${p.cnae} ${p.atividade}`.toUpperCase().includes(keyword)); const categoryPts = industrial ? rules.cnaeA : p.cnae || p.atividade ? rules.cnaeB : rules.cnaeSemClassificacao; details.push({ criterio: "Aderência por CNAE", resultado: industrial ? "Categoria A · industrial/produção" : "Categoria B · mercado intermediário", pontos: categoryPts });
   const coords: [number, number] | null = Number.isFinite(p.lat) && Number.isFinite(p.lon) && p.lat !== 0 && p.lon !== 0 ? [p.lat,p.lon] : CITY_COORDS[city] ?? null;
-  const hubs = [...DEFAULT_HUBS, ...extraHubs.filter(hub => hub.nome.trim() && Number.isFinite(hub.lat) && Number.isFinite(hub.lon))];
-  const distanciasHubs = coords ? hubs.map(hub => ({ nome: hub.nome.trim(), distanciaKm: haversine(coords, hub) })).sort((a,b) => a.distanciaKm - b.distanciaKm) : [];
+  const suppliedDefaults = extraHubs.some(hub => DEFAULT_HUBS.some(defaultHub => defaultHub.nome === hub.nome));
+  const hubs = (suppliedDefaults ? extraHubs : [...DEFAULT_HUBS, ...extraHubs]).filter(hub => hub.nome.trim() && Number.isFinite(hub.lat) && Number.isFinite(hub.lon));
+  const distanciasHubs = coords ? hubs.map(hub => ({ nome: hub.nome.trim(), distanciaKm: haversine(coords, hub), minimumScore: hub.minimumScore })).sort((a,b) => a.distanciaKm - b.distanciaKm || a.nome.localeCompare(b.nome, "pt-BR")) : [];
   const near = distanciasHubs[0]?.nome ?? "não calculado";
   const marKm = distanciasHubs.find(hub => hub.nome === "Marília")?.distanciaKm ?? null;
   const rpKm = distanciasHubs.find(hub => hub.nome === "Ribeirão Preto")?.distanciaKm ?? null;
   const nearestKm = distanciasHubs[0]?.distanciaKm;
-  const geoPts = nearestKm == null ? 1 : nearestKm <= SCORING_RULES.geografia.hubProximoKm ? 3 : nearestKm <= SCORING_RULES.geografia.regiaoSecundariaKm ? 2 : 1;
+  const geoPts = nearestKm == null ? rules.geoDistante : nearestKm <= rules.geoProximoKm ? rules.geoProximo : nearestKm <= rules.geoSecundarioKm ? rules.geoSecundario : rules.geoDistante;
   details.push({ criterio: "Geografia", resultado: coords ? `${near} é o hub mais próximo` : "Cidade sem coordenada cadastrada", pontos: geoPts });
   const nearestHub = hubs.find(hub => hub.nome.trim() === near); const ddd = onlyDigits(p.ddd ?? "").slice(0, 2); const hubDdd = onlyDigits(nearestHub?.ddd ?? "").slice(0, 2);
-  const dddPts = ddd && hubDdd && ddd === hubDdd ? SCORING_RULES.ddd.mesmoDddPontos : ddd && SCORING_RULES.ddd.dddsSaoPaulo.includes(ddd as never) ? SCORING_RULES.ddd.mesmoEstadoPontos : SCORING_RULES.ddd.outroPontos;
+  const dddPts = ddd && hubDdd && ddd === hubDdd ? rules.dddMesmo : ddd && SCORING_RULES.ddd.dddsSaoPaulo.includes(ddd as never) ? rules.dddEstado : rules.dddOutro;
   const dddResult = !ddd ? "DDD não informado; pontuação conservadora" : ddd === hubDdd ? `DDD ${ddd} coincide com o hub mais próximo` : SCORING_RULES.ddd.dddsSaoPaulo.includes(ddd as never) ? `DDD ${ddd} pertence à região de São Paulo` : `DDD ${ddd} fora da região de São Paulo`;
   details.push({ criterio: "DDD / proximidade telefônica", resultado: dddResult, pontos: dddPts });
-  const score = details.reduce((s,d)=>s+d.pontos,0); const hubLabel = near.toLowerCase().startsWith("hub ") ? near : `Hub ${near}`; const vendedor = score >= SCORING_RULES.pontuacaoMinimaExterna && near !== "não calculado" ? `Vendedor Externo — ${hubLabel}` : "Vendedor Interno Online";
-  const reason = `${p.razaoSocial} soma ${score} pontos: ${details.map(d => `${d.criterio}: ${d.pontos} ponto(s)`).join("; ")}. ${near === "não calculado" ? "A distância não pôde ser calculada com os dados disponíveis." : `Distâncias: ${distanciasHubs.map(hub => `${hub.nome} ${hub.distanciaKm} km`).join(", ")}; ${near} é o hub mais próximo.`} Recomendação: ${vendedor}.`;
-  return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, ddd, score, scoreDetalhes: details, vendedor, hubMaisProximo: near, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, distanciasHubs, explicacao: reason };
+  const score = details.reduce((s,d)=>s+d.pontos,0); const eligibleHubs = distanciasHubs.filter(hub => score >= (hub.minimumScore ?? rules.minimoExterno)); const selectedHub = eligibleHubs[0]; const selectedName = selectedHub?.nome ?? "não calculado"; const hubLabel = selectedName.toLowerCase().startsWith("hub ") ? selectedName : `Hub ${selectedName}`; const vendedor = selectedHub ? `Vendedor Externo — ${hubLabel}` : "Vendedor Interno Online";
+  const reason = `${p.razaoSocial} soma ${score} pontos: ${details.map(d => `${d.criterio}: ${d.pontos} ponto(s)`).join("; ")}. ${near === "não calculado" ? "A distância não pôde ser calculada com os dados disponíveis." : `Distâncias: ${distanciasHubs.map(hub => `${hub.nome} ${hub.distanciaKm} km`).join(", ")}; ${eligibleHubs.length ? `${selectedName} é o hub elegível de menor distância.` : "Nenhum hub alcançou a pontuação mínima configurada."}`} Recomendação: ${vendedor}.`;
+  return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, ddd, score, scoreDetalhes: details, vendedor, hubMaisProximo: selectedName, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, distanciasHubs, explicacao: reason };
 }
 
-export async function fetchCnpj(cnpj: string, overrides: CnpjOverrides = {}, extraHubs: HubInput[] = []): Promise<CnpjResult> {
+export async function fetchCnpj(cnpj: string, overrides: CnpjOverrides = {}, extraHubs: HubInput[] = [], ruleOverrides: RuntimeRules = {}): Promise<CnpjResult> {
   const clean = onlyDigits(cnpj);
   if (!isValidCnpj(clean)) throw new Error("CNPJ inválido. Confira os 14 dígitos informados.");
   const response = await fetch(`https://open.cnpja.com/office/${clean}`);
   if (!response.ok) throw new Error(`CNPJá retornou HTTP ${response.status}.`);
-  return scoreCompany(await response.json(), clean, overrides, extraHubs);
+  return scoreCompany(await response.json(), clean, overrides, extraHubs, ruleOverrides);
 }
 
-export function createPdf(results: CnpjResult[]) {
+export function createPdf(results: CnpjResult[], configuration?: { hubs: HubInput[]; rules: RuntimeRules }) {
   const doc = new PDFDocument({ margin: 42, size: "A4" });
   doc.fontSize(20).fillColor("#16324F").text("Análise Carteira Micro Automação Campinas");
   doc.fontSize(9).fillColor("#5E7184").text(`Relatório determinístico · ${new Date().toLocaleString("pt-BR")}`);
   doc.moveDown(.7).fontSize(11).fillColor("#16324F").text("Como a análise é calculada");
-  doc.fontSize(9).fillColor("#263B4D").text("A pontuação soma cinco critérios auditáveis: situação cadastral, capital social/porte inferido, aderência por CNAE, proximidade geográfica do hub e DDD. O atendimento externo é recomendado quando a pontuação alcança o limiar comercial e existe um hub com distância calculada. O hub recomendado é sempre o de menor distância entre os hubs comparados.");
+  doc.fontSize(9).fillColor("#263B4D").text("A pontuação soma cinco critérios auditáveis: situação cadastral, capital social/porte inferido, aderência por CNAE, proximidade geográfica do hub e DDD. Um hub só é elegível quando a pontuação alcança seu mínimo individual; entre os elegíveis, vence a menor distância geodésica. Em empate exato, o nome do hub estabelece uma ordem estável.");
+  if (configuration) { const rules = configuration.rules; doc.moveDown(.45).fontSize(9).fillColor("#263B4D").text(`Snapshot aplicado: mínimo padrão externo ${rules.minimoExterno ?? SCORING_RULES.pontuacaoMinimaExterna}; hubs ${configuration.hubs.map(hub => `${hub.nome} (mínimo ${hub.minimumScore ?? rules.minimoExterno ?? SCORING_RULES.pontuacaoMinimaExterna})`).join(" | ")}.`); doc.text(`Pesos: situação ativa ${rules.situacaoAtiva ?? SCORING_RULES.situacao.ativaPontos}; capital grande/médio/pequeno ${rules.capitalGrande ?? 3}/${rules.capitalMedia ?? 2}/${rules.capitalPequena ?? 1}; CNAE A/B ${rules.cnaeA ?? SCORING_RULES.categoria.industrialPontos}/${rules.cnaeB ?? SCORING_RULES.categoria.intermediariaPontos}; geografia ${rules.geoProximo ?? 3}/${rules.geoSecundario ?? 2}/${rules.geoDistante ?? 1}; DDD ${rules.dddMesmo ?? SCORING_RULES.ddd.mesmoDddPontos}/${rules.dddEstado ?? SCORING_RULES.ddd.mesmoEstadoPontos}/${rules.dddOutro ?? SCORING_RULES.ddd.outroPontos}.`); }
   results.forEach((r, i) => {
     if (i > 0) doc.addPage();
     doc.moveDown(1).fontSize(16).fillColor("#16324F").text(r.razaoSocial);

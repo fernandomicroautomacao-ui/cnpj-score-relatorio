@@ -1,0 +1,1 @@
+ALTER TABLE `sales_hubs` ADD `minimumScore` int;

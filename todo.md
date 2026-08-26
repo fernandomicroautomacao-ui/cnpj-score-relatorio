@@ -63,3 +63,10 @@
 - [x] Explicar no PDF a metodologia e os critérios de pontuação aplicados
 - [x] Atualizar a interface para Análise Carteira Micro Automação Campinas
 - [x] Adicionar rodapé Fernando Feitosa — Revisor
+
+- [x] Criar persistência de hubs com Marília e Ribeirão Preto pré-configurados
+- [x] Implementar CRUD de hubs no painel de controle
+- [x] Implementar CRUD de pesos, índices e pontuação mínima de encaminhamento
+- [x] Aplicar a menor distância como critério de desempate entre hubs elegíveis
+- [x] Integrar regras persistidas à análise e ao relatório PDF
+- [x] Testar o painel e a decisão configurável de roteamento

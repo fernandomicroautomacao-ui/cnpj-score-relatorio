@@ -64,6 +64,39 @@ describe("CNPJ deterministic scoring", () => {
     expect(result.vendedor).toBe("Vendedor Externo — Hub Bauru");
   });
 
+  it("only routes to hubs whose individual minimum score is met, then chooses the shortest distance", () => {
+    const result = scoreCompany({
+      company: { name: "Empresa de limiar", equity: 1_000_000 },
+      office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação industrial" }, address: { city: "Bauru", state: "SP" } },
+    }, "00000000000191", {}, [
+      { nome: "Hub Próximo", lat: -22.3246, lon: -49.0871, minimumScore: 20 },
+      { nome: "Hub Elegível", lat: -22.2139, lon: -49.9458, minimumScore: 5 },
+    ]);
+    expect(result.score).toBeLessThan(20);
+    expect(result.vendedor).toBe("Vendedor Externo — Hub Elegível");
+    expect(result.hubMaisProximo).toBe("Hub Elegível");
+  });
+
+  it("uses alphabetical name as a stable fallback when eligible hub distances are exactly equal", () => {
+    const result = scoreCompany({
+      company: { name: "Empresa empate", equity: 1_000_000 },
+      office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação industrial" }, address: { city: "Bauru", state: "SP" } },
+    }, "00000000000191", {}, [
+      { nome: "Hub Zebra", lat: -22.3246, lon: -49.0871, minimumScore: 1 },
+      { nome: "Hub Alfa", lat: -22.3246, lon: -49.0871, minimumScore: 1 },
+    ]);
+    expect(result.hubMaisProximo).toBe("Hub Alfa");
+    expect(result.vendedor).toBe("Vendedor Externo — Hub Alfa");
+  });
+
+  it("applies configured capital and geographic thresholds to the deterministic score", () => {
+    const raw = { company: { name: "Empresa calibrada", equity: 2_000_000 }, office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação industrial" }, address: { city: "Bauru", state: "SP" } } };
+    const standard = scoreCompany(raw, "00000000000191");
+    const calibrated = scoreCompany(raw, "00000000000191", {}, [], { capitalGrandeMin: 1_000_000, capitalGrande: 7, geoProximoKm: 1, geoSecundarioKm: 2, geoDistante: 0 });
+    expect(calibrated.score).not.toBe(standard.score);
+    expect(calibrated.scoreDetalhes.find(detail => detail.criterio === "Capital social / porte inferido")).toMatchObject({ pontos: 7 });
+  });
+
   it("adds audit points when the client DDD matches the closest hub", () => {
     const result = scoreCompany({
       company: { name: "Empresa DDD", equity: 1_000_000 },
@@ -84,7 +117,7 @@ describe("CNPJ deterministic scoring", () => {
       company: { name: "Empresa PDF", equity: 1_000_000 },
       office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação industrial" }, address: { city: "Bauru", state: "SP" } },
     }, "00000000000191");
-    const pdf = createPdf([result]);
+    const pdf = createPdf([result], { hubs: [{ nome: "Hub Auditoria", lat: -22.3246, lon: -49.0871, minimumScore: 8 }], rules: { minimoExterno: 8, capitalGrande: 3, capitalMedia: 2, capitalPequena: 1, cnaeA: 3, cnaeB: 2, geoProximo: 3, geoSecundario: 2, geoDistante: 1, dddMesmo: 3, dddEstado: 2, dddOutro: 1 } });
     const buffer = await new Promise<Buffer>((resolve, reject) => {
       const chunks: Buffer[] = [];
       pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
