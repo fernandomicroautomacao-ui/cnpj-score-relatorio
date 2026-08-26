@@ -89,3 +89,14 @@
 - [x] Testar peso negativo real sem persistir alterações de teste
 - [x] Cobrir a rejeição de todos os limiares comerciais negativos
 - [x] Testar endpoint com peso real negativo usando isolamento sem persistência
+- [x] Diagnosticar por que as configurações não estão sendo salvas em produção
+- [x] Corrigir o fluxo de autenticação e persistência do painel de Configurações
+- [x] Testar salvamento de parâmetros e hubs no ambiente publicado
+- [x] Configurar CONTROL_PANEL_TOKEN no ambiente Netlify publicado
+- [x] Exibir orientação clara quando a chave administrativa do Netlify estiver ausente
+- [x] Remover a chave de acesso e a autorização do painel de Configurações
+- [x] Permitir salvamento direto de hubs e parâmetros no Netlify
+- [x] Validar o fluxo publicado sem senha
+- [ ] Remover definitivamente campo, estado e mensagem de senha do cliente
+- [ ] Validar um POST sem senha no Netlify e confirmar a persistência após recarregar
+- [ ] Atualizar a documentação para registrar que o painel é público sem CONTROL_PANEL_TOKEN

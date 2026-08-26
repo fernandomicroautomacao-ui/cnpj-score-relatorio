@@ -2,7 +2,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { adminProcedure, publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
 import { createPdf, fetchCnpj } from "./cnpj";
 import { createSalesHub, deleteSalesHub, getControlConfiguration, restoreControlDefaults, updateSalesHub, updateScoringParameter } from "./db";
 
@@ -65,11 +65,11 @@ export const appRouter = router({
   }),
   controlPanel: router({
     list: publicProcedure.query(() => getControlConfiguration()),
-    createHub: adminProcedure.input(storedHubInput).mutation(({ input }) => createSalesHub({ ...input, state: input.state.toUpperCase() })),
-    updateHub: adminProcedure.input(z.object({ id: z.number().int().positive(), data: storedHubInput.partial() })).mutation(({ input }) => updateSalesHub(input.id, { ...input.data, state: input.data.state?.toUpperCase() })),
-    deleteHub: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteSalesHub(input.id)),
-    updateParameter: adminProcedure.input(z.object({ key: z.string().min(1).max(64), value: z.number().int().min(-100).max(1_000_000_000) }).superRefine((input, ctx) => { const nonNegative = ["capitalGrandeMin", "capitalMediaMin", "geoProximoKm", "geoSecundarioKm", "minimoExterno"]; if (nonNegative.includes(input.key) && input.value < (input.key === "minimoExterno" || input.key.startsWith("geo") ? 1 : 0)) ctx.addIssue({ code:"custom", path:["value"], message:"Este limiar não aceita valor negativo." }); })).mutation(({ input }) => updateScoringParameter(input.key, input.value)),
-    restoreDefaults: adminProcedure.mutation(() => restoreControlDefaults()),
+    createHub: publicProcedure.input(storedHubInput).mutation(({ input }) => createSalesHub({ ...input, state: input.state.toUpperCase() })),
+    updateHub: publicProcedure.input(z.object({ id: z.number().int().positive(), data: storedHubInput.partial() })).mutation(({ input }) => updateSalesHub(input.id, { ...input.data, state: input.data.state?.toUpperCase() })),
+    deleteHub: publicProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteSalesHub(input.id)),
+    updateParameter: publicProcedure.input(z.object({ key: z.string().min(1).max(64), value: z.number().int().min(-100).max(1_000_000_000) }).superRefine((input, ctx) => { const nonNegative = ["capitalGrandeMin", "capitalMediaMin", "geoProximoKm", "geoSecundarioKm", "minimoExterno"]; if (nonNegative.includes(input.key) && input.value < (input.key === "minimoExterno" || input.key.startsWith("geo") ? 1 : 0)) ctx.addIssue({ code:"custom", path:["value"], message:"Este limiar não aceita valor negativo." }); })).mutation(({ input }) => updateScoringParameter(input.key, input.value)),
+    restoreDefaults: publicProcedure.mutation(() => restoreControlDefaults()),
   }),
 });
 
