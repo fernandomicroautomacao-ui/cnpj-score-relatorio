@@ -31,7 +31,7 @@
 
 - [x] Avaliar e preparar a adaptação do backend para Netlify Functions
 - [x] Criar configuração de build e variáveis de ambiente para Netlify
-- [ ] Orientar envio do projeto ao GitHub e conexão de deploy com Netlify
+- [x] Orientar envio do projeto ao GitHub e conexão de deploy com Netlify
 
 - [x] Remover o uso opcional de chave comercial e fixar a API Pública do CNPJá
 - [x] Atualizar documentação de deploy para o limite de 5 consultas por minuto da API Pública
