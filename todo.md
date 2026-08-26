@@ -57,3 +57,9 @@
 
 - [x] Evitar duplicação do prefixo “Hub” no vendedor recomendado
 - [x] Atualizar o teste de hubs adicionais com nomenclatura comercial limpa
+
+- [x] Diagnosticar e corrigir a geração de relatório PDF no Netlify
+- [x] Adicionar critério auditável de proximidade por DDD
+- [x] Explicar no PDF a metodologia e os critérios de pontuação aplicados
+- [x] Atualizar a interface para Análise Carteira Micro Automação Campinas
+- [x] Adicionar rodapé Fernando Feitosa — Revisor

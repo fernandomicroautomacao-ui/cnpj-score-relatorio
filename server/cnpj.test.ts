@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidCnpj, scoreCompany } from "./cnpj";
+import { createPdf, isValidCnpj, scoreCompany } from "./cnpj";
 
 describe("CNPJ deterministic scoring", () => {
   it("validates a known valid CNPJ and rejects repeated digits", () => {
@@ -62,5 +62,37 @@ describe("CNPJ deterministic scoring", () => {
     expect(result.distanciasHubs[0]).toMatchObject({ nome: "Hub Bauru", distanciaKm: 0 });
     expect(result.hubMaisProximo).toBe("Hub Bauru");
     expect(result.vendedor).toBe("Vendedor Externo — Hub Bauru");
+  });
+
+  it("adds audit points when the client DDD matches the closest hub", () => {
+    const result = scoreCompany({
+      company: { name: "Empresa DDD", equity: 1_000_000 },
+      office: {
+        status: { text: "Ativa" },
+        mainActivity: { id: "2511000", text: "Fabricação industrial" },
+        address: { city: "Bauru", state: "SP" },
+        phones: [{ area: "14", number: "999999999" }],
+      },
+    }, "00000000000191");
+
+    expect(result.ddd).toBe("14");
+    expect(result.scoreDetalhes.find(detail => detail.criterio === "DDD / proximidade telefônica")).toMatchObject({ pontos: 3 });
+  });
+
+  it("creates a non-empty PDF after event handlers are attached", async () => {
+    const result = scoreCompany({
+      company: { name: "Empresa PDF", equity: 1_000_000 },
+      office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação industrial" }, address: { city: "Bauru", state: "SP" } },
+    }, "00000000000191");
+    const pdf = createPdf([result]);
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
+      pdf.on("end", () => resolve(Buffer.concat(chunks)));
+      pdf.on("error", reject);
+      pdf.end();
+    });
+    expect(buffer.subarray(0, 4).toString()).toBe("%PDF");
+    expect(buffer.length).toBeGreaterThan(500);
   });
 });

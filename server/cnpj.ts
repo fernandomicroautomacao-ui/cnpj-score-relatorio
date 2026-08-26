@@ -13,6 +13,7 @@ export type CnpjResult = {
   cidade: string;
   uf: string;
   endereco: string;
+  ddd: string;
   score: number;
   scoreDetalhes: { criterio: string; resultado: string; pontos: number }[];
   vendedor: string;
@@ -24,11 +25,11 @@ export type CnpjResult = {
 };
 
 export type CnpjOverrides = Partial<Pick<CnpjResult, "razaoSocial" | "nomeFantasia" | "situacao" | "capitalSocial" | "cnaePrincipal" | "atividadePrincipal" | "cidade" | "uf" | "endereco">>;
-export type HubInput = { nome: string; cidade?: string; uf?: string; lat: number; lon: number };
+export type HubInput = { nome: string; cidade?: string; uf?: string; ddd?: string; lat: number; lon: number };
 
 const DEFAULT_HUBS: HubInput[] = [
-  { nome: "Marília", cidade: "Marília", uf: "SP", lat: -22.2139, lon: -49.9458 },
-  { nome: "Ribeirão Preto", cidade: "Ribeirão Preto", uf: "SP", lat: -21.1775, lon: -47.8103 },
+  { nome: "Marília", cidade: "Marília", uf: "SP", ddd: "14", lat: -22.2139, lon: -49.9458 },
+  { nome: "Ribeirão Preto", cidade: "Ribeirão Preto", uf: "SP", ddd: "16", lat: -21.1775, lon: -47.8103 },
 ];
 
 const CITY_COORDS: Record<string, [number, number]> = {
@@ -62,7 +63,7 @@ function extract(payload: any, cnpj: string): any {
     nomeFantasia: text(office.alias, payload.alias, payload.nomeFantasia), situacao: text(office.status?.text, office.status, payload.status?.text, payload.status) || "Não informada",
     capitalSocial: numberValue(company.equity, company.capitalSocial, payload.equity, payload.capitalSocial), porteRaw: text(company.size?.text, company.size, payload.size),
     cnae: text(mainActivity.id, mainActivity.code, office.mainActivity?.id, payload.cnaePrincipal), atividade: text(mainActivity.text, mainActivity.description, payload.atividadePrincipal),
-    cidade: text(address.city, office.address?.city, payload.city), uf: text(address.state, address.uf, payload.uf), endereco: [address.street, address.number, address.district, address.city, address.state].filter(Boolean).join(", "),
+    cidade: text(address.city, office.address?.city, payload.city), uf: text(address.state, address.uf, payload.uf), endereco: [address.street, address.number, address.district, address.city, address.state].filter(Boolean).join(", "), ddd: onlyDigits(text(office.phones?.[0]?.area, payload.phones?.[0]?.area)).slice(0, 2),
     lat: Number(payload.geocoding?.latitude ?? payload.latitude ?? office.geocoding?.latitude), lon: Number(payload.geocoding?.longitude ?? payload.longitude ?? office.geocoding?.longitude),
   };
 }
@@ -81,9 +82,13 @@ export function scoreCompany(raw: any, cnpj: string, overrides: CnpjOverrides = 
   const nearestKm = distanciasHubs[0]?.distanciaKm;
   const geoPts = nearestKm == null ? 1 : nearestKm <= SCORING_RULES.geografia.hubProximoKm ? 3 : nearestKm <= SCORING_RULES.geografia.regiaoSecundariaKm ? 2 : 1;
   details.push({ criterio: "Geografia", resultado: coords ? `${near} é o hub mais próximo` : "Cidade sem coordenada cadastrada", pontos: geoPts });
+  const nearestHub = hubs.find(hub => hub.nome.trim() === near); const ddd = onlyDigits(p.ddd ?? "").slice(0, 2); const hubDdd = onlyDigits(nearestHub?.ddd ?? "").slice(0, 2);
+  const dddPts = ddd && hubDdd && ddd === hubDdd ? SCORING_RULES.ddd.mesmoDddPontos : ddd && SCORING_RULES.ddd.dddsSaoPaulo.includes(ddd as never) ? SCORING_RULES.ddd.mesmoEstadoPontos : SCORING_RULES.ddd.outroPontos;
+  const dddResult = !ddd ? "DDD não informado; pontuação conservadora" : ddd === hubDdd ? `DDD ${ddd} coincide com o hub mais próximo` : SCORING_RULES.ddd.dddsSaoPaulo.includes(ddd as never) ? `DDD ${ddd} pertence à região de São Paulo` : `DDD ${ddd} fora da região de São Paulo`;
+  details.push({ criterio: "DDD / proximidade telefônica", resultado: dddResult, pontos: dddPts });
   const score = details.reduce((s,d)=>s+d.pontos,0); const hubLabel = near.toLowerCase().startsWith("hub ") ? near : `Hub ${near}`; const vendedor = score >= SCORING_RULES.pontuacaoMinimaExterna && near !== "não calculado" ? `Vendedor Externo — ${hubLabel}` : "Vendedor Interno Online";
   const reason = `${p.razaoSocial} soma ${score} pontos: ${details.map(d => `${d.criterio}: ${d.pontos} ponto(s)`).join("; ")}. ${near === "não calculado" ? "A distância não pôde ser calculada com os dados disponíveis." : `Distâncias: ${distanciasHubs.map(hub => `${hub.nome} ${hub.distanciaKm} km`).join(", ")}; ${near} é o hub mais próximo.`} Recomendação: ${vendedor}.`;
-  return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, score, scoreDetalhes: details, vendedor, hubMaisProximo: near, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, distanciasHubs, explicacao: reason };
+  return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, ddd, score, scoreDetalhes: details, vendedor, hubMaisProximo: near, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, distanciasHubs, explicacao: reason };
 }
 
 export async function fetchCnpj(cnpj: string, overrides: CnpjOverrides = {}, extraHubs: HubInput[] = []): Promise<CnpjResult> {
@@ -96,8 +101,10 @@ export async function fetchCnpj(cnpj: string, overrides: CnpjOverrides = {}, ext
 
 export function createPdf(results: CnpjResult[]) {
   const doc = new PDFDocument({ margin: 42, size: "A4" });
-  doc.fontSize(20).fillColor("#16324F").text("CNPJ Score & Roteamento Comercial");
+  doc.fontSize(20).fillColor("#16324F").text("Análise Carteira Micro Automação Campinas");
   doc.fontSize(9).fillColor("#5E7184").text(`Relatório determinístico · ${new Date().toLocaleString("pt-BR")}`);
+  doc.moveDown(.7).fontSize(11).fillColor("#16324F").text("Como a análise é calculada");
+  doc.fontSize(9).fillColor("#263B4D").text("A pontuação soma cinco critérios auditáveis: situação cadastral, capital social/porte inferido, aderência por CNAE, proximidade geográfica do hub e DDD. O atendimento externo é recomendado quando a pontuação alcança o limiar comercial e existe um hub com distância calculada. O hub recomendado é sempre o de menor distância entre os hubs comparados.");
   results.forEach((r, i) => {
     if (i > 0) doc.addPage();
     doc.moveDown(1).fontSize(16).fillColor("#16324F").text(r.razaoSocial);
@@ -105,12 +112,13 @@ export function createPdf(results: CnpjResult[]) {
     doc.moveDown(.6).fontSize(12).fillColor("#0F766E").text(`Recomendação: ${r.vendedor}`);
     doc.fontSize(10).fillColor("#263B4D").text(`Pontuação: ${r.score} pontos   |   Hub mais próximo: ${r.hubMaisProximo}`);
     doc.moveDown(.4).text(`Capital social: ${r.capitalSocial == null ? "Não informado" : `R$ ${r.capitalSocial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}   |   Porte inferido: ${r.porte}`);
+    doc.text(`DDD identificado: ${r.ddd || "Não informado"}`);
     doc.text(`Endereço: ${r.endereco || "Não informado"}`);
     doc.text(`Distâncias aos hubs: ${r.distanciasHubs.length ? r.distanciasHubs.map(hub => `${hub.nome} ${hub.distanciaKm} km`).join(" | ") : "n/d"}`);
     doc.moveDown(.8).fontSize(11).fillColor("#16324F").text("Memória de cálculo");
     r.scoreDetalhes.forEach(d => doc.fontSize(9).fillColor("#263B4D").text(`• ${d.criterio}: ${d.resultado} — ${d.pontos} ponto(s)`));
     doc.moveDown(.8).fontSize(10).text(r.explicacao);
+    doc.moveDown(1).fontSize(8).fillColor("#5E7184").text("Fernando Feitosa — Revisor", { align: "right" });
   });
-  doc.end();
   return doc;
 }

@@ -19,6 +19,7 @@ export default async (request: Request) => {
       pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
       pdf.on("end", () => resolve(Buffer.concat(chunks)));
       pdf.on("error", reject);
+      pdf.end();
     });
     return new Response(new Uint8Array(data), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename=relatorio-cnpj-${Date.now()}.pdf` } });
   } catch {

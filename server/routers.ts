@@ -9,7 +9,7 @@ const overridesInput = z.object({
   razaoSocial: z.string().optional(), nomeFantasia: z.string().optional(), situacao: z.string().optional(), capitalSocial: z.number().nullable().optional(),
   cnaePrincipal: z.string().optional(), atividadePrincipal: z.string().optional(), cidade: z.string().optional(), uf: z.string().optional(), endereco: z.string().optional(),
 }).partial();
-const hubInput = z.object({ nome: z.string().trim().min(2).max(80), cidade: z.string().trim().max(80).optional(), uf: z.string().trim().max(2).optional(), lat: z.number().min(-34).max(6), lon: z.number().min(-75).max(-28) });
+const hubInput = z.object({ nome: z.string().trim().min(2).max(80), cidade: z.string().trim().max(80).optional(), uf: z.string().trim().max(2).optional(), ddd: z.string().regex(/^\d{2}$/).optional(), lat: z.number().min(-34).max(6), lon: z.number().min(-75).max(-28) });
 const cnpjInput = z.object({ cnpjs: z.array(z.string().min(1)).min(1).max(5, "A API Pública permite no máximo cinco consultas por minuto."), overrides: overridesInput.optional(), hubs: z.array(hubInput).max(10).optional() });
 
 export const appRouter = router({
@@ -50,6 +50,7 @@ export const appRouter = router({
         pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
         pdf.on("end", () => resolve({ filename: `relatorio-cnpj-${Date.now()}.pdf`, data: Buffer.concat(chunks).toString("base64") }));
         pdf.on("error", reject);
+        pdf.end();
       });
     }),
   }),
