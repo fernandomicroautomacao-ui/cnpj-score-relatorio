@@ -70,3 +70,10 @@
 - [x] Aplicar a menor distância como critério de desempate entre hubs elegíveis
 - [x] Integrar regras persistidas à análise e ao relatório PDF
 - [x] Testar o painel e a decisão configurável de roteamento
+- [x] Mover a chave administrativa para o topo da navegação
+- [x] Criar a rota e a tela separada de Configurações
+- [x] Concentrar hubs, pesos, limiares e botão Salvar na tela de Configurações
+- [x] Deixar a tela principal limitada à consulta de CNPJ e ao relatório PDF
+- [x] Validar navegação, responsividade, testes e build após a reorganização
+- [x] Validar em desktop e mobile as telas de consulta e Configurações
+- [x] Testar a navegação real entre Consulta e Configurações

@@ -12,4 +12,8 @@ button { transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color
 button:active { transform: scale(.97); }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(15,118,110,.25); outline-offset: 2px; }
 .brand-mark { display:flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:12px; color:#fff; background:linear-gradient(145deg,#0f9b8e,#102a43); box-shadow:0 8px 18px rgba(15,118,110,.22); }
+@media (max-width: 640px) {
+  .flex:has(> input[placeholder="00.000.000/0001-00"]) { flex-direction: column; }
+  .flex:has(> input[placeholder="00.000.000/0001-00"]) > button { width: 100%; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
