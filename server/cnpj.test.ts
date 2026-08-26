@@ -31,4 +31,20 @@ describe("CNPJ deterministic scoring", () => {
     expect(result.cidade).toBe("Ribeirão Preto");
     expect(result.vendedor).toBe("Vendedor Externo — Hub Ribeirão Preto");
   });
+
+  it("calculates both hub distances for São José do Rio Pardo", () => {
+    const result = scoreCompany({
+      company: { name: "Empresa teste", equity: 2_000_000 },
+      office: {
+        status: { text: "Ativa" },
+        mainActivity: { id: "1113502", text: "Fabricação" },
+        address: { city: "São José do Rio Pardo", state: "SP" },
+      },
+    }, "00000000000191");
+
+    expect(result.distanciaMariliaKm).not.toBeNull();
+    expect(result.distanciaRibeiraoKm).not.toBeNull();
+    expect(result.hubMaisProximo).toBe("Ribeirão Preto");
+    expect(result.distanciaRibeiraoKm).toBeLessThan(result.distanciaMariliaKm!);
+  });
 });

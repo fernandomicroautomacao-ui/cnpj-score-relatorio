@@ -46,3 +46,6 @@
 
 - [x] Testar procedure de busca cadastral antes da análise
 - [x] Cobrir o bloqueio de análise individual sem confirmação dos dados revisados
+
+- [x] Corrigir a cobertura de coordenadas para São José do Rio Pardo
+- [x] Validar o cálculo de distância e roteamento para os dois hubs
