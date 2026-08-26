@@ -97,6 +97,14 @@ describe("CNPJ deterministic scoring", () => {
     expect(calibrated.scoreDetalhes.find(detail => detail.criterio === "Capital social / porte inferido")).toMatchObject({ pontos: 7 });
   });
 
+  it("accepts negative configured weights as auditable score penalties", () => {
+    const raw = { company: { name: "Empresa com penalidade", equity: 1_000_000 }, office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação industrial" }, address: { city: "Bauru", state: "SP" } } };
+    const regular = scoreCompany(raw, "00000000000191");
+    const penalized = scoreCompany(raw, "00000000000191", {}, [], { cnaeA: -4, dddOutro: -2 });
+    expect(penalized.score).toBeLessThan(regular.score);
+    expect(penalized.scoreDetalhes.find(detail => detail.criterio === "Aderência por CNAE")).toMatchObject({ pontos: -4 });
+  });
+
   it("adds audit points when the client DDD matches the closest hub", () => {
     const result = scoreCompany({
       company: { name: "Empresa DDD", equity: 1_000_000 },

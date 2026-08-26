@@ -77,3 +77,15 @@
 - [x] Validar navegação, responsividade, testes e build após a reorganização
 - [x] Validar em desktop e mobile as telas de consulta e Configurações
 - [x] Testar a navegação real entre Consulta e Configurações
+- [x] Permitir valores negativos nos pesos de pontuação configuráveis
+- [x] Manter limiares comerciais e mínimos de hub sem valores negativos
+- [x] Cobrir pesos negativos em testes do motor e da interface
+- [x] Bloquear mínimo de hub negativo no endpoint Netlify e na interface
+- [x] Testar a rejeição de mínimo de hub negativo no fluxo de produção
+- [x] Cobrir a distinção entre pesos negativos e limiares não negativos
+- [x] Validar no cliente a pontuação mínima de hub antes de salvar
+- [x] Cobrir mínimo negativo em criação e edição de hub no endpoint publicado
+- [x] Testar aceitação de peso negativo e rejeição de limiares negativos
+- [x] Testar peso negativo real sem persistir alterações de teste
+- [x] Cobrir a rejeição de todos os limiares comerciais negativos
+- [x] Testar endpoint com peso real negativo usando isolamento sem persistência
