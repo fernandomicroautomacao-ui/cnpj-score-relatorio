@@ -22,6 +22,8 @@ export type CnpjResult = {
   explicacao: string;
 };
 
+export type CnpjOverrides = Partial<Pick<CnpjResult, "razaoSocial" | "nomeFantasia" | "situacao" | "capitalSocial" | "cnaePrincipal" | "atividadePrincipal" | "cidade" | "uf" | "endereco">>;
+
 const HUBS = {
   Marília: { lat: -22.2139, lon: -49.9458 },
   "Ribeirão Preto": { lat: -21.1775, lon: -47.8103 },
@@ -63,8 +65,8 @@ function extract(payload: any, cnpj: string): any {
   };
 }
 
-export function scoreCompany(raw: any, cnpj: string): CnpjResult {
-  const p = extract(raw, cnpj); const city = normCity(p.cidade); const details: CnpjResult["scoreDetalhes"] = [];
+export function scoreCompany(raw: any, cnpj: string, overrides: CnpjOverrides = {}): CnpjResult {
+  const base = extract(raw, cnpj); const p = { ...base, ...overrides, cnae: overrides.cnaePrincipal ?? base.cnae, atividade: overrides.atividadePrincipal ?? base.atividade }; const city = normCity(p.cidade); const details: CnpjResult["scoreDetalhes"] = [];
   const status = p.situacao.toUpperCase(); const active = SCORING_RULES.situacao.ativaKeywords.some(keyword => status.includes(keyword)); details.push({ criterio: "Situação cadastral", resultado: active ? "Ativa/regular" : p.situacao, pontos: active ? SCORING_RULES.situacao.ativaPontos : SCORING_RULES.situacao.inativaPontos });
   const equity = p.capitalSocial ?? 0; const sizePts = p.capitalSocial == null ? SCORING_RULES.capitalSocial.semInformacaoPontos : equity >= SCORING_RULES.capitalSocial.grandeMin ? 3 : equity >= SCORING_RULES.capitalSocial.mediaMin ? 2 : 1; const porte = equity >= SCORING_RULES.capitalSocial.grandeMin ? "Grande" : equity >= SCORING_RULES.capitalSocial.mediaMin ? "Média" : "Pequena"; details.push({ criterio: "Capital social / porte inferido", resultado: p.capitalSocial == null ? "Não informado; faixa conservadora" : `R$ ${equity.toLocaleString("pt-BR",{minimumFractionDigits:2})} · ${porte}`, pontos: sizePts });
   const industrial = SCORING_RULES.cnaeCategoriaAKeywords.some(keyword => `${p.cnae} ${p.atividade}`.toUpperCase().includes(keyword)); const categoryPts = industrial ? SCORING_RULES.categoria.industrialPontos : p.cnae || p.atividade ? SCORING_RULES.categoria.intermediariaPontos : SCORING_RULES.categoria.semClassificacaoPontos; details.push({ criterio: "Aderência por CNAE", resultado: industrial ? "Categoria A · industrial/produção" : "Categoria B · mercado intermediário", pontos: categoryPts });
@@ -76,13 +78,13 @@ export function scoreCompany(raw: any, cnpj: string): CnpjResult {
   return { cnpj, razaoSocial: p.razaoSocial, nomeFantasia: p.nomeFantasia, situacao: p.situacao, capitalSocial: p.capitalSocial, porte, cnaePrincipal: p.cnae, atividadePrincipal: p.atividade, cidade: p.cidade, uf: p.uf, endereco: p.endereco, score, scoreDetalhes: details, vendedor, hubMaisProximo: near, distanciaMariliaKm: marKm, distanciaRibeiraoKm: rpKm, explicacao: reason };
 }
 
-export async function fetchCnpj(cnpj: string, apiKey?: string): Promise<CnpjResult> {
+export async function fetchCnpj(cnpj: string, apiKey?: string, overrides: CnpjOverrides = {}): Promise<CnpjResult> {
   const clean = onlyDigits(cnpj);
   if (!isValidCnpj(clean)) throw new Error("CNPJ inválido. Confira os 14 dígitos informados.");
   const url = apiKey ? `https://api.cnpja.com/office/${clean}` : `https://open.cnpja.com/office/${clean}`;
   const response = await fetch(url, { headers: apiKey ? { Authorization: apiKey } : {} });
   if (!response.ok) throw new Error(`CNPJá retornou HTTP ${response.status}.`);
-  return scoreCompany(await response.json(), clean);
+  return scoreCompany(await response.json(), clean, overrides);
 }
 
 export function createPdf(results: CnpjResult[]) {
@@ -105,4 +107,3 @@ export function createPdf(results: CnpjResult[]) {
   doc.end();
   return doc;
 }
-

@@ -1,0 +1,14 @@
+[build]
+  command = "pnpm exec vite build"
+  publish = "dist/public"
+
+[build.environment]
+  VITE_DEPLOY_TARGET = "netlify"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

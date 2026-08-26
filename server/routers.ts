@@ -5,7 +5,11 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { createPdf, fetchCnpj } from "./cnpj";
 
-const cnpjInput = z.object({ cnpjs: z.array(z.string().min(1)).min(1).max(100) });
+const overridesInput = z.object({
+  razaoSocial: z.string().optional(), nomeFantasia: z.string().optional(), situacao: z.string().optional(), capitalSocial: z.number().nullable().optional(),
+  cnaePrincipal: z.string().optional(), atividadePrincipal: z.string().optional(), cidade: z.string().optional(), uf: z.string().optional(), endereco: z.string().optional(),
+}).partial();
+const cnpjInput = z.object({ cnpjs: z.array(z.string().min(1)).min(1).max(100), overrides: overridesInput.optional() });
 
 export const appRouter = router({
   system: systemRouter,
@@ -18,13 +22,16 @@ export const appRouter = router({
     }),
   }),
   cnpj: router({
+    lookup: publicProcedure.input(z.object({ cnpj: z.string().min(1) })).mutation(async ({ input }) => {
+      return fetchCnpj(input.cnpj, process.env.CNPJA_API_KEY);
+    }),
     analyze: publicProcedure.input(cnpjInput).mutation(async ({ input }) => {
       const apiKey = process.env.CNPJA_API_KEY;
       const results = [];
       const errors = [];
       for (const value of input.cnpjs) {
         try {
-          results.push(await fetchCnpj(value, apiKey));
+          results.push(await fetchCnpj(value, apiKey, input.overrides));
         } catch (error) {
           errors.push({ cnpj: value, message: error instanceof Error ? error.message : "Falha ao consultar o CNPJ." });
         }
@@ -35,7 +42,7 @@ export const appRouter = router({
       const apiKey = process.env.CNPJA_API_KEY;
       const results = [];
       for (const value of input.cnpjs) {
-        try { results.push(await fetchCnpj(value, apiKey)); } catch { /* relatório segue com os CNPJs válidos */ }
+        try { results.push(await fetchCnpj(value, apiKey, input.overrides)); } catch { /* relatório segue com os CNPJs válidos */ }
       }
       if (!results.length) throw new Error("Nenhum CNPJ válido foi consultado.");
       const chunks: Buffer[] = [];

@@ -2,6 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { appRouter } from "./routers";
 
 describe("cnpj procedures", () => {
+  it("loads the company data for review before the commercial analysis", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ company: { name: "Revisão Teste", equity: 3000000 }, office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação" }, address: { city: "Bauru", state: "SP" } } }), { status: 200 })));
+    const caller = appRouter.createCaller({ user: undefined, req: {} as any, res: {} as any });
+    const response = await caller.cnpj.lookup({ cnpj: "00.000.000/0001-91" });
+    expect(response.razaoSocial).toBe("Revisão Teste");
+    expect(response.cidade).toBe("Bauru");
+    vi.unstubAllGlobals();
+  });
+
   it("analyzes an individual CNPJ through the router", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ company: { name: "Cliente Teste", equity: 12000000 }, office: { status: { text: "Ativa" }, mainActivity: { id: "2511000", text: "Fabricação industrial" }, address: { city: "Bauru", state: "SP" } } }), { status: 200, headers: { "Content-Type": "application/json" } })));
     const caller = appRouter.createCaller({ user: undefined, req: {} as any, res: {} as any });

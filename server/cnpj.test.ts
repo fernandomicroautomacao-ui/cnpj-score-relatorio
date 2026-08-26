@@ -22,4 +22,13 @@ describe("CNPJ deterministic scoring", () => {
     expect(result.distanciaMariliaKm).not.toBeNull();
     expect(result.distanciaRibeiraoKm).not.toBeNull();
   });
+
+  it("uses confirmed user edits when recalculating the recommendation", () => {
+    const result = scoreCompany({ office: { status: { text: "Ativa" }, address: { city: "Bauru", state: "SP" } } }, "00000000000191", {
+      razaoSocial: "Cadastro Corrigido LTDA", cidade: "Ribeirão Preto", capitalSocial: 2_000_000, cnaePrincipal: "2511000", atividadePrincipal: "Fabricação industrial",
+    });
+    expect(result.razaoSocial).toBe("Cadastro Corrigido LTDA");
+    expect(result.cidade).toBe("Ribeirão Preto");
+    expect(result.vendedor).toBe("Vendedor Externo — Hub Ribeirão Preto");
+  });
 });

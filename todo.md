@@ -26,3 +26,16 @@
 
 - [x] Centralizar também pesos de situação cadastral e categoria ICP no arquivo de regras
 - [x] Cobrir com teste unitário a normalização da lista importada e a máscara de CNPJ
+
+- [x] Preparar pacote de arquivos HTML, CSS e JavaScript para download
+
+- [ ] Avaliar e preparar a adaptação do backend para Netlify Functions
+- [ ] Criar configuração de build e variáveis de ambiente para Netlify
+- [ ] Orientar envio do projeto ao GitHub e conexão de deploy com Netlify
+
+- [x] Consultar o CNPJ individual e exibir os dados em formulário editável
+- [x] Aplicar alterações confirmadas pelo usuário ao cálculo, justificativa e PDF
+- [x] Testar o fluxo de revisão cadastral antes da análise
+
+- [x] Testar procedure de busca cadastral antes da análise
+- [x] Cobrir o bloqueio de análise individual sem confirmação dos dados revisados
