@@ -4,6 +4,7 @@
 
 [build.environment]
   VITE_DEPLOY_TARGET = "netlify"
+  NODE_VERSION = "22"
 
 [functions]
   directory = "netlify/functions"

@@ -29,8 +29,8 @@
 
 - [x] Preparar pacote de arquivos HTML, CSS e JavaScript para download
 
-- [ ] Avaliar e preparar a adaptação do backend para Netlify Functions
-- [ ] Criar configuração de build e variáveis de ambiente para Netlify
+- [x] Avaliar e preparar a adaptação do backend para Netlify Functions
+- [x] Criar configuração de build e variáveis de ambiente para Netlify
 - [ ] Orientar envio do projeto ao GitHub e conexão de deploy com Netlify
 
 - [x] Consultar o CNPJ individual e exibir os dados em formulário editável
