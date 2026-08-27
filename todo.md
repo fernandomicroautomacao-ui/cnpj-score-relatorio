@@ -111,9 +111,18 @@
 - [x] Aplicar espera de 15 segundos entre consultas à API Pública do CNPJá
 - [x] Criar relatório resumido individual em formato de tabela
 - [x] Criar relatório resumido consolidado do lote em formato de tabela exportável
-- [ ] Validar duração, continuidade, limite e exportação dos relatórios resumidos
+- [x] Validar duração, continuidade, limite e exportação dos relatórios resumidos
 - [x] Implementar fila persistente e consulta de status para processamento em segundo plano
 - [x] Processar lotes em partes, com uma consulta a cada 15 segundos, sem depender da aba aberta
 - [x] Exibir progresso, conclusão e falhas do lote na tela principal
 - [x] Implementar execução persistente em partes compatível com o hosting atual
 - [x] Manter intervalo de 15 segundos entre CNPJs sem processo contínuo
+- [x] Remover o uso de Async Workloads e as funções de lote em segundo plano
+- [x] Dividir a lista de até 500 CNPJs em grupos manuais de até cinco itens
+- [x] Exigir clique em Pesquisar próximo grupo antes de cada nova consulta
+- [x] Manter resultados acumulados e tabela CSV consolidada dos grupos processados
+- [x] Validar a progressão manual, o limite por grupo e a exportação resumida
+- [x] Validar no navegador um lote que avance por pelo menos dois grupos manuais
+- [x] Confirmar acúmulo de resultados e falhas após o segundo grupo
+- [x] Registrar uma validação prática do intervalo entre consultas dentro de um grupo
+- [x] Registrar a duração observada de um grupo de cinco CNPJs e a cadência de 15 segundos
