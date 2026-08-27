@@ -96,7 +96,10 @@
 - [x] Exibir orientação clara quando a chave administrativa do Netlify estiver ausente
 - [x] Remover a chave de acesso e a autorização do painel de Configurações
 - [x] Permitir salvamento direto de hubs e parâmetros no Netlify
-- [x] Validar o fluxo publicado sem senha
+- [ ] Validar o fluxo publicado sem senha
+- [ ] Persistir configurações em armazenamento compatível com Netlify quando a escrita no banco falhar
+- [ ] Fazer análise e PDF publicados lerem a mesma configuração persistida
+- [ ] Validar alteração e recarga reais no Netlify sem senha
 - [ ] Remover definitivamente campo, estado e mensagem de senha do cliente
 - [ ] Validar um POST sem senha no Netlify e confirmar a persistência após recarregar
 - [ ] Atualizar a documentação para registrar que o painel é público sem CONTROL_PANEL_TOKEN

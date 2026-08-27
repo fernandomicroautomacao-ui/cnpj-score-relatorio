@@ -33,21 +33,16 @@ Não é necessário configurar chave, token ou variável de ambiente. A aplicaç
 
 ## 4. Painel de controle persistente
 
-O painel de hubs e pesos grava dados nas tabelas `sales_hubs` e `scoring_parameters`. Para manter as alterações no site publicado, configure em **Site configuration → Environment variables**:
+No site publicado, o painel salva hubs, pesos e limites no **Netlify Blobs**, o armazenamento nativo de chave-valor do Netlify. Não é necessário configurar `DATABASE_URL` ou `CONTROL_PANEL_TOKEN` para gravar as configurações: o armazenamento é provisionado automaticamente pelo Netlify e permanece disponível entre deploys.
 
-| Variável | Finalidade |
-|---|---|
-| `DATABASE_URL` | String de conexão MySQL/TiDB que contém as migrações do painel. Use SSL se o provedor exigir. |
-| `CONTROL_PANEL_TOKEN` | Chave forte para autorizar alterações administrativas em `/api/control`. Informe a mesma chave no campo administrativo do painel somente enquanto for editar. |
-
-Sem `DATABASE_URL`, a aplicação mostra valores seguros de fábrica, mas não grava alterações no ambiente publicado. Sem `CONTROL_PANEL_TOKEN`, o endpoint de alteração fica bloqueado por segurança. Nunca inclua esses valores no repositório ou no frontend.
+> O painel foi configurado para acesso direto, sem senha, conforme solicitado. Assim, qualquer pessoa que tenha acesso à página `/configuracoes` pode alterar os critérios comerciais. Para voltar a restringir o acesso no futuro, habilite autenticação e uma regra de autorização antes de divulgar o endereço.
 
 ## 5. Publicação
 
-Confirme o primeiro deploy. O Netlify publicará o frontend e as funções `/api/lookup`, `/api/analyze` e `/api/report`. Os próximos `git push` na branch `main` geram novas publicações automaticamente.
+Confirme o primeiro deploy. O Netlify publicará o frontend e as funções `/api/lookup`, `/api/analyze`, `/api/report` e `/api/control`. Os próximos `git push` na branch `main` geram novas publicações automaticamente.
 
 ## Referências oficiais
 
 - [Vite no Netlify](https://docs.netlify.com/build/frameworks/framework-setup-guides/vite/)
 - [Primeira Netlify Function](https://docs.netlify.com/build/functions/get-started/)
-- [Variáveis de ambiente em Functions](https://docs.netlify.com/build/functions/environment-variables/)
+- [Netlify Blobs](https://docs.netlify.com/build/data-and-storage/netlify-blobs/)
