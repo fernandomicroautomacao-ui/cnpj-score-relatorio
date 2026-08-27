@@ -106,3 +106,14 @@
 - [x] Remover definitivamente campo, estado e mensagem de senha do cliente
 - [x] Validar um POST sem senha no Netlify e confirmar a persistência após recarregar
 - [x] Atualizar a documentação para registrar que o painel é público sem CONTROL_PANEL_TOKEN
+- [x] Definir a execução adequada para lote de até 500 CNPJs com espera de 15 segundos
+- [x] Aumentar o limite de importação e processamento para até 500 CNPJs
+- [x] Aplicar espera de 15 segundos entre consultas à API Pública do CNPJá
+- [x] Criar relatório resumido individual em formato de tabela
+- [x] Criar relatório resumido consolidado do lote em formato de tabela exportável
+- [ ] Validar duração, continuidade, limite e exportação dos relatórios resumidos
+- [x] Implementar fila persistente e consulta de status para processamento em segundo plano
+- [x] Processar lotes em partes, com uma consulta a cada 15 segundos, sem depender da aba aberta
+- [x] Exibir progresso, conclusão e falhas do lote na tela principal
+- [x] Implementar execução persistente em partes compatível com o hosting atual
+- [x] Manter intervalo de 15 segundos entre CNPJs sem processo contínuo
