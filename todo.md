@@ -126,3 +126,11 @@
 - [x] Confirmar acúmulo de resultados e falhas após o segundo grupo
 - [x] Registrar uma validação prática do intervalo entre consultas dentro de um grupo
 - [x] Registrar a duração observada de um grupo de cinco CNPJs e a cadência de 15 segundos
+- [x] Iniciar automaticamente o próximo grupo dois segundos após concluir o atual
+- [x] Exibir contagem regressiva e opção de cancelar o avanço automático
+- [x] Manter a espera de 15 segundos entre CNPJs e os resultados acumulados
+- [x] Validar a sequência automática entre grupos e a conclusão da tabela CSV
+- [x] Cobrir em teste o temporizador de dois segundos, o disparo e o cancelamento do próximo grupo
+- [x] Validar um lote de dois grupos com avanço automático, cadência de 15 segundos e resultados acumulados
+- [x] Atualizar os registros de validação e o guia de deploy para o avanço automático
+- [x] Executar no navegador um lote de dois grupos e confirmar o disparo automático do segundo grupo

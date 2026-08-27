@@ -37,11 +37,13 @@ No site publicado, o painel salva hubs, pesos e limites no **Netlify Blobs**, o 
 
 > O painel foi configurado para acesso direto, sem senha, conforme solicitado. Assim, qualquer pessoa que tenha acesso à página `/configuracoes` pode alterar os critérios comerciais. Para voltar a restringir o acesso no futuro, habilite autenticação e uma regra de autorização antes de divulgar o endereço.
 
-## 5. Processamento em lote manual
+## 5. Processamento em lote com continuidade automática
 
-O processamento em lote aceita até **500 CNPJs**. A lista é automaticamente dividida em grupos de **até cinco CNPJs**; para respeitar a API Pública do CNPJá, há uma espera de **15 segundos** entre as consultas de cada grupo.
+O processamento em lote aceita até **500 CNPJs**. A lista é automaticamente dividida em grupos de **até cinco CNPJs**; para respeitar a API Pública do CNPJá, há uma espera de **15 segundos** entre as consultas de cada grupo. Quando a entrada possuir mais de 500 itens, apenas os primeiros 500 serão encaminhados ao processamento.
 
-Depois que um grupo termina, o usuário deve clicar em **Pesquisar próximo grupo** para iniciar o seguinte. Assim, o lote não depende de execução contínua, extensões do Netlify ou créditos adicionais. Os resultados ficam acumulados na tela.
+Depois que um grupo termina, o sistema inicia o seguinte automaticamente após uma contagem de **2 segundos**. Durante a contagem, o usuário pode selecionar **Cancelar avanço automático**; então, o próximo grupo não é consultado até que seja iniciado manualmente. Assim, o lote não depende de extensões do Netlify, créditos adicionais ou processamento hospedado em segundo plano. Os resultados ficam acumulados na tela.
+
+> O avanço automático é executado pelo navegador. Mantenha a aba aberta enquanto houver grupos pendentes; fechar ou recarregar a página interrompe o lote atual.
 
 Ao concluir, a aplicação exibe uma tabela resumida com CNPJ, empresa, localização, situação, score, canal, hub e distância. O botão **Baixar tabela CSV (Excel)** gera um arquivo compatível com Excel. Para consulta individual, o PDF detalhado continua disponível.
 

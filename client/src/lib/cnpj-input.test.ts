@@ -7,7 +7,10 @@ describe("cnpj input helpers", () => {
   });
   it("processa listas coladas ou importadas e limita o lote a 500 CNPJs", () => {
     expect(parseCnpjList("00.000.000/0001-91\n11.111.111/1111-11, 12.345.678/0001-95")).toEqual(["00000000000191", "11111111111111", "12345678000195"]);
-    expect(parseCnpjList(Array.from({ length: 520 }, (_, i) => String(i).padStart(14, "0")).join("\n"))).toHaveLength(500);
+    const limited = parseCnpjList(Array.from({ length: 520 }, (_, i) => String(i).padStart(14, "0")).join("\n"));
+    expect(limited).toHaveLength(500);
+    expect(getCnpjGroup(limited, 495)).toHaveLength(5);
+    expect(getCnpjGroup(limited, 500)).toEqual([]);
   });
   it("divide a lista em grupos manuais de no máximo cinco CNPJs", () => {
     const values = Array.from({ length: 12 }, (_, i) => String(i).padStart(14, "0"));
